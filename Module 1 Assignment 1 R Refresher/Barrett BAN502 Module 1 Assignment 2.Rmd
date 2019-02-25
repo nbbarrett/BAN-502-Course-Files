@@ -1,0 +1,122 @@
+---
+output:
+  word_document: default
+  pdf_document: default
+  html_document: default
+---
+## R and RStudio Refresher Assignment
+
+### BAN502 - Module 1 / Assignment 2
+
+### Nick Barrett, 1/27/19
+
+
+####Task 1.  Install and load "tidyverse".
+```{r}
+#install.packages(tidyverse)
+```
+
+```{r}
+library(tidyverse)
+```
+
+
+
+####Task 2:  Read in the "diamonddata" data frame.  
+ 
+```{r}
+diamonddata = diamonds
+```
+
+```{r}
+nrow(diamonds)
+```
+```{r}
+ncol(diamonds)
+```
+
+
+
+####Task 3:  Create a scatterplot of carat versus price with ggplot.
+
+```{r}
+ggplot(diamonds,aes(carat,price))+
+geom_point()
+```
+
+Considering the above scatterplot comparing carat to price, it is observed that generally the larger the carat size the higher the price.  
+
+
+
+####Task 4:  Repeat Task 3, using "cut" to color the scatterplot.  Describe the relationship between the three variables (carat, price and cut)
+
+```{r}
+ggplot(diamonds,aes(carat,price,color=cut))+
+geom_point()
+```
+
+Observing the above scatterplot with the three variables of carat, price and cut, the majority of the diamonds are 1 to 2 carats.  Of these 1 to 2 carat diamonds, the majority of those diamonds are of cuts from "very good" to "ideal".  The number of "fair" and "good" cuts are far less less than the other cuts.  Regarding price, carat size appears to have a positive relationship to pricing - bigger carat sizes are more expensive.
+
+
+
+####Task 5:  Repeat Task 4 using facet to color the scatterplot.  Describe the relationship between the four variables (carat, price, cut and color)
+
+```{r}
+ggplot(diamonds,aes(carat,price,color=cut))+
+geom_point()+
+  facet_wrap(~color)
+```
+
+
+
+####Task 6:  Use "readr" to read-in the "InventoryData.csv" as a dataframe called "inventory".  Examine the structure and summary of data-frame.
+
+```{r}
+library(readr)
+Inventory <- read_csv("InventoryData.csv")
+summary(Inventory)
+```
+
+
+
+####Task 7:  Create a new data frame called "inventoryA" containing inventory from Supplier A.  Determine the number of rows in the new data frame.
+
+```{r}
+inventoryA <-filter(Inventory,Supplier=="A")
+```
+
+```{r}
+nrow(inventoryA)
+```
+The new data frame, "inventoryA", has 3695 rows and 6 variables.  
+
+
+
+####Task 8:  Use the mutute code below and determine what it does.
+
+```{r}
+inventoryA = mutate(inventoryA, OnHandRatio = `On Hand` / `Annual Demand`)
+```
+
+The above mutate code adds a column, 'OnHandRatio', to the "inventoryA" data frame that calculates the ratio of 'on hand' inventory in relation to the 'annual demand'.
+
+
+
+####Task 9:  Create a new data frame called "avg_cost" that contains the average "Cost per Unit ($)" by each "Item SKU" creating a new variable "SKUAvgCost".
+
+```{r}
+avg_cost <- select(Inventory, "Item SKU", "Cost per Unit ($)")
+```
+```{r}
+avg_cost <- avg_cost %>%
+  group_by(`Item SKU`)%>%
+  summarise(count = n(),
+            SKUAvgCost = mean(`Cost per Unit ($)`))
+```
+```{r}
+avg_cost <-select(avg_cost,"Item SKU","SKUAvgCost")
+```
+
+####Task 10:  Given my previous experience with R/RStudio, the topics that I found most challenging.
+
+I had Programming for Analytics last semester, so it is still somewhat fresh; however, I do not in anyway feel like I speak the language yet.  I have to have a lot of reference points and examples to work my way through to solutions.  I tend to figure it out but I get stuck often. I look forward to getting more comfortable in application.

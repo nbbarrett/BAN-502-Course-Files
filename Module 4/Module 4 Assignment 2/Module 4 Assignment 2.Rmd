@@ -1,0 +1,90 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+##  Module 4 Assignment 2 - Random Forests
+
+###  Nicholas Barrett, 02/16/19
+
+```{r}
+options(tidyverse.quiet = TRUE)
+library(tidyverse)
+library(caret)
+library(ranger)
+```
+
+```{r}
+blood2 = read_csv("Blood.csv")
+```
+
+```{r}
+blood2 = blood2 %>% mutate(DonatedMarch = as.factor(DonatedMarch))%>%
+  mutate(DonatedMarch = fct_recode(DonatedMarch, "Yes" = "1", "No" = "0"))
+```
+
+###  Task 1 - Split the dataset into training and testing sets.  Use set.seed of 1234.
+```{r}
+set.seed(1234)
+
+train.rows = createDataPartition(y = blood2$DonatedMarch, p=0.7, list = FALSE) 
+train = blood2[train.rows,] 
+test = blood2[-train.rows,]
+```
+
+###  Task 2 - Create a random forest model on the training set to predict DonatedMarch using all of the variables in the dataset.  Use caret's trainControl functon to set up 10 fold cross-validation.  use random number seed of 123.  use 100 trees.
+
+```{r}
+fit_control = trainControl(method = "cv", number = 10)
+
+set.seed(123)
+rf_fit = train(DonatedMarch ~.,
+               data = train,
+               method = "ranger",
+               importance = "permutation",
+               num.trees = 100,
+               trControl = fit_control)
+```
+
+
+###  Task 3 - Use varImp, determine the most and least important variable in the model.
+
+```{r}
+varImp(rf_fit)
+rf_fit
+```
+
+The most important variable is TotalDonations and the least important variable is Mnths_Since_First.
+
+###  Task 4 - Use the modoel to develop predictions on the training set.  Use the "head" funchion to display the first six predictions.
+
+```{r}
+predRF = predict(rf_fit, train)
+head(predRF)
+```
+
+
+###  Task 5 - Use the the model to create a confusion using caret's confusionMatrix function for the training set.  Determine the accuracy, sensitivity, and specificity of the model.
+
+```{r}
+confusionMatrix(predRF, train$DonatedMarch, positive = "Yes")
+```
+The accuracy of the random forest model for the training set is 89.5%.  The sensitivity of the training set is 60%.  The specificity of the training set of the random forest model is 98.7%.
+
+
+###  Task 6 - Determine the accuracy of the model compared ot a naive model that assumes that all observations are in the majority class.
+
+The 89.5% accuracy of the model is better than the naive model's 76.1% accuracy.
+
+##  Task 7 - Use the model to develop predictions on the test set.  Develop a confusion matrix.  Determine how the model performs on the testing set.
+
+```{r}
+predRF2 = predict(rf_fit, test)
+head(predRF2)
+```
+```{r}
+confusionMatrix(predRF2, test$DonatedMarch, positive = "Yes")
+```
+
+The random forest model for the testing dataset has an accuracy of 78.1% whereas the naive model's accuracy is 76.3%.  It is a better predictor than the naive model.
+

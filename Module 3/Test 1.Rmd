@@ -1,0 +1,42 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+```{r}
+library(tidyverse)
+library(GGally)
+library(MASS)
+library(leaps)
+library(caret)
+```
+```{r}
+credit <- read_csv("CreditData.csv")
+```
+```{r}
+credit <- credit %>% drop_na()
+str(credit)
+```
+```{r}
+train.rows <- createDataPartition(y= credit$AnnualCharges, p= 0.7, list = FALSE)
+train <- credit[train.rows,]
+test <- credit[-train.rows,]
+```
+
+```{r}
+ggpairs(train)
+```
+
+```{r}
+mod1 <- lm(AnnualCharges ~ AnnualIncome, train)
+summary(mod1)
+```
+```{r}
+test_preds<- predict(mod1, newdata = test)
+```
+
+```{r}
+SSE <- sum((test$AnnualCharges - test_preds)^2)
+SST <- sum((test$AnnualCharges - mean(test$AnnualCharges))^2)
+1 - SSE/SST
+```

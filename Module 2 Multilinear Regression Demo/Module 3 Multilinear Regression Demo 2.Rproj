@@ -1,0 +1,75 @@
+## MLR Demo
+
+Libraries
+```{r}
+library(tidyverse)
+library(GGally)
+```
+
+```{r}
+college <- read.csv("College-1.csv")
+glimpse(college)
+```
+
+We'll leave school as is - we actually use it in our modelling.  We may use "Type" which is currently a character type variable.  Let's use mutate to convert to a factor.
+
+```{r}
+college<- college %>% mutate(Type = as_factor(Type))
+str(college)
+```
+
+Visualize relationships and look a correlation (note - Correlation not calculated for non-quantitative varables like "School" and "Type").  The variable we will ultimately try predict is "GradPercent".
+
+```{r}
+ggpairs(college,columns = c(2:7)) #exclude the 1st column which contains "Type"
+```
+
+Closer look at "Type" and "GradPercent".
+```{r}
+ggplot(college, aes(x= Type, y= GradPercent)) + geom_boxplot() + theme_bw()
+```
+
+Model
+
+```{r}
+mod1 <- lm(GradPercent ~ Type, college)
+summary(mod1)
+```
+
+84.120 + (-1.787)*Type
+
+Prediction by Type
+
+```{r}
+predict(mod1, newdata = data.frame(Type = c("Lib Arts", "University")))
+```
+
+An example with multiple levels in a categorical variable.
+
+```{r}
+flower = iris
+str(flower)
+```
+
+Visualize/correlate
+```{r}
+ggpairs(flower)
+```
+
+Model (Species to predict Sepal.Length)
+
+```{r}
+mod2 <- lm(Sepal.Length ~ Species, flower)
+summary(mod2)
+```
+5.0060 + 0.93*Versicolor + (1.582)(Virginica)
+
+
+Prediction for virinica
+```{r}
+predict(mod2, newdata = data.frame(Species = c("setosa", "versicolor", "virginica")))
+```
+
+
+
+

@@ -1,0 +1,153 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+##  Module 3 Model Validation Assignment 1
+
+###  Nicholas Barrett, 02/09/19
+
+```{r}
+library(tidyverse)
+library(MASS)
+library(caret)
+library(GGally)
+```
+
+
+```{r}
+bike <- read_csv("hour.csv")
+```
+
+```{r}
+bike <- bike %>% mutate(season = as_factor(as.character(season))) %>%
+  mutate(season = fct_recode(season, "Spring" = "1", "Summer" = "2", "Fall" = "3", "Winter" = "4"))
+```
+
+```{r}
+bike <- bike %>% mutate(yr = as_factor(as.character(yr)))
+bike <- bike %>% mutate(mnth = as_factor(as.character(mnth)))
+bike <- bike %>% mutate(hr = as_factor(as.character(hr)))
+str(bike)
+```
+
+```{r}
+bike <- bike %>% mutate(holiday = as_factor(as.character(holiday))) %>%
+  mutate(holiday = fct_recode(holiday, "NotHoliday" = "0", "Holiday" = "1"))
+
+bike <- bike %>% mutate(workingday = as_factor(as.character(workingday))) %>%
+  mutate(workingday = fct_recode(workingday, "NotWorkingDay" = "0", "WorkingDay" = "1"))
+
+bike <- bike %>% mutate(weathersit = as_factor(as.character(weathersit))) %>%
+  mutate(weathersit = fct_recode(weathersit, "NoPrecip" = "1", "Misty" = "2", "LightPrecip" = "3", "HeavyPrecip" = "4"))
+
+bike <- bike %>% mutate(weekday = as_factor(as.character(weekday))) %>%
+  mutate(weekday = fct_recode(weekday, "Saturday" = "6", "Sunday" = "0", "Monday" = "1", "Tuesday" = "2", "Wednesday" = "3", "Thursday" = "4", "Friday" = "5"))
+
+str(bike)
+```
+
+```{r}
+bike <- bike %>% drop_na()
+str(bike)
+```
+
+###  Task 1 - Split the data into traininig and testing sets.  Use random number of 1234
+
+
+
+```{r}
+ctrl <- trainControl(method = "cv", number = 10)
+
+set.seed(1234)
+modCV <- train(count ~ casual, bike, method = "lm", trControl = ctrl, metric = "Rsquared")
+summary(modCV)
+```
+
+
+```{r}
+train.rows <- createDataPartition(y= bike$count, p= 0.7, list = FALSE)
+train <- bike[train.rows,]
+test <- bike[-train.rows,]
+```
+
+```{r}
+ggcorr(train, label = TRUE)
+```
+
+
+```{r}
+ggcorr(test, label = TRUE)
+```
+
+###  Task 2 - How many rows of data are in each set - training and testing?
+
+```{r}
+str(train)
+```
+
+```{r}
+str(test)
+```
+
+The training set has 12,167 rows of data and 17 variables.
+
+The testing set has 5,212 rows of data and 17 variables.
+
+###  Task 3 - Build a linear regression model (using the training set) to predict "count" using variables - season, mnth, hr, holiday, weekday, temp and weathersit.  Comment on the quality of the model.  Note the Adjusted R-squared value.
+
+The model appears to be a good model.  There are significant relationships in the variables in some of the levels within the variables.  The overall linear model with these variables has a strong R-squared value of 0.6223
+
+```{r}
+mod1 <- lm(count ~ season + mnth + hr + holiday + weekday + temp + weathersit, train)
+summary(mod1)
+```
+
+###  Task 4 - Use the predict functions to make predictions using the mod1.  Use "head" to display the first six predictions.
+
+The first 6 predictons in the testing set range from -57 to 299 on the fitted lines with a upper value range from 161.15 - 518.20 and a lower value range from 79.97 to -277.10 using the variables to determine the number of bike rides.  
+
+```{r}
+predict_train <- predict(mod1, interval = "prediction")
+head(predict_train)
+```
+
+
+#### Task 5 - Use the predict functions to make prediction using the model from Task 3 on the training set.  Use the "head" funiton to display the first six predicitons.
+
+
+The first 6 predicitons in the training set range from -53 to 204 on the fitted lines with a upper value range from 164.0357 - 422.1641 and a lower range between -13.93566 and -271.72673 using the variables to determine the number of bike rides. 
+
+```{r}
+mod2 <- lm(count ~ season + mnth + hr + holiday + weekday + temp + weathersit, test)
+summary(mod2)
+```
+
+```{r}
+predict_test <- predict(mod2, interval = "prediction")
+head(predict_test)
+```
+
+###  Task 6 - Manually calculate the R-squared value on the testing set.
+
+The value computed manually, 0.6234 is very similar to the value generated with the training set as 0.6223.  This would indicate that the model is not likely overfitted.
+
+```{r}
+test_preds <- predict(mod1, newdata = test)
+```
+
+
+
+```{r}
+SSE <- sum((test$count - test_preds)^2)
+SST <- sum((test$count - mean(test$count))^2)
+1 - SSE/SST
+```
+
+
+###  Task 7 - Compare k-fold cross-validation and train/test split.
+
+Two ways to validate a linear modeal is split the dat using two methods such as:  Train/Test Splitting and K-Fold Cross-Validation.  These two methods help to prevent over-fitting.  For Train/Test method is when you randomly split data into two groups to evaluate performance on the training set and compare the modeled results against the test set ("the one hidden behind you back".  You would use this method along with K-fold cross-validate on very large dataset.
+
+In K-fold Cross- Validate the data is split into "k" folds or partitions typically in groups of 3, 5 or 10.  Each fold of data removed ones fold to help test the values.  K-Fold is preferred because the model can be run multiple (k) times to get the best view of model validity.  K-fold is used with large dataset and can be combined with train-test for the best accuracy. 
+

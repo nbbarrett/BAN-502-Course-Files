@@ -1,0 +1,231 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+##  Module 2 Assignment 2
+
+###  Nicholas Barrett, 02/02/19
+
+```{r}
+library(tidyverse)
+library(GGally)
+library(MASS)
+library(leaps)
+```
+
+
+###  Task 1 - Read in the "hour.csv" file into a data frame named "bike".  Complete the variable conversions and recoding. 
+
+```{r}
+bike = read_csv("hours.csv")
+```
+
+Convert "season" variable to factor and rename to be more descriptive.
+
+```{r}
+bike <- bike %>% mutate(season = as_factor(as.character(season))) %>%
+  mutate(season = fct_recode(season, "Spring" = "1", "Summer" = "2", "Fall" = "3", "Winter" = "4"))
+```
+
+Convert "yr", "mnth", and "hr" to factors.
+
+```{r}
+bike <- bike %>% mutate(yr = as_factor(as.character(yr)))
+```
+
+```{r}
+bike <- bike %>% mutate(mnth = as_factor(as.character(mnth)))
+```
+
+```{r}
+bike <- bike %>% mutate(hr = as_factor(as.character(hr)))
+```
+
+```{r}
+str(bike)
+```
+
+Convert the "holiday" variable to a factor and recode the level of the factors.
+
+```{r}
+bike <- bike %>% mutate(holiday = as_factor(as.character(holiday))) %>%
+  mutate(holiday = fct_recode(holiday, "NotHoliday" = "0", "Holiday" = "1"))
+```
+
+Convert the "workingday" variable to a factor and recode the level of the factors.
+
+```{r}
+bike <- bike %>% mutate(workingday = as_factor(as.character(workingday))) %>%
+  mutate(workingday = fct_recode(workingday, "NotWorkingDay" = "0", "WorkingDay" = "1"))
+```
+
+Convert the "weathersit" variable to a factor and recode the level of the factors.
+
+```{r}
+bike <- bike %>% mutate(weathersit = as_factor(as.character(weathersit))) %>%
+  mutate(weathersit = fct_recode(weathersit, "NoPrecip" = "1", "Misty" = "2", "LightPrecip" = "3", "HeavyPrecip" = "4"))
+```
+
+Convert the "weekday" variable to a factor and recode the level of the factors.
+
+```{r}
+bike <- bike %>% mutate(weekday = as_factor(as.character(weekday))) %>%
+  mutate(weekday = fct_recode(weekday, "Saturday" = "6", "Sunday" = "0", "Monday" = "1", "Tuesday" = "2", "Wednesday" = "3", "Thursday" = "4", "Friday" = "5"))
+```
+
+```{r}
+str(bike)
+```
+
+Why do we convert "yr", "mnth", and "hr" into factors?  Why not just leave them as numbers?  Converting numbers to factors allows these variables to become binary dummy variables.  Making this change helps handle various levels within these variables. 
+
+###  Task 2 - Which of the quantitative variables appears to be best correlated with "count" - ignoring "registered" and "count" variables as the sume of these equals "count".
+
+```{r}
+ggcorr(bike, label = TRUE)
+```
+
+From the chart above, it appears that "temp" is the best correlated variable to the "count".
+
+
+###  Task 3 - Complete a boxplot-based analysis for each categorical variable:  Season, Yr, Mnth, Holiday, WorkingDay, Weathersit, and weekday. Explain why each does or does not affect count.
+
+```{r}
+ggplot(bike,aes(x = hr, y = count)) + geom_boxplot()
+```
+Hour of the day appears to have a significant impact on the number of bike rides - evidenced by the increased number of rides during daylight hours.
+
+```{r}
+ggplot(bike,aes(x = season, y = count)) + geom_boxplot()
+```
+
+Seasons do not appears to have a significant impact on the count of rides.  The median count for each season are very close.
+
+```{r}
+ggplot(bike,aes(x = yr, y = count)) + geom_boxplot()
+```
+
+Year does not appear to have a significant impact on the count.
+
+```{r}
+ggplot(bike,aes(x = mnth, y = count)) + geom_boxplot()
+```
+
+Month appears to have a significant relationship to the number of rides that appears to grow during warmer months.
+
+```{r}
+ggplot(bike,aes(x = holiday, y = count)) + geom_boxplot()
+```
+
+Holidays versus non-holidays does not appear to have a significant relationship with the number of rides.  However, there are more outliers outside of the 3rd Quartile during NotHoliday times.
+
+
+
+```{r}
+ggplot(bike,aes(x = workingday, y = count)) + geom_boxplot()
+```
+
+Working day does not appear to have a significant impact on bike ride counts.
+
+
+```{r}
+ggplot(bike,aes(x = weathersit, y = count)) + geom_boxplot()
+```
+
+The weather situation appears to have a significance on the number of bike rides.  Days with light or heavy rain had far fewer rides than misty or no precip days.
+
+```{r}
+ggplot(bike,aes(x = weekday, y = count)) + geom_boxplot()
+```
+
+Day of the week appears to have no significance in the count of bike rides. The 1-3 quartile ranges are practically the same.
+
+###  Task 4 - Use forward stepwise regression to build a multiple linear regression model to predict "count".
+
+```{r}
+bike2 = bike %>% dplyr::select(-c(instant, dteday, registered, casual)) 
+```
+
+```{r}
+bike2 = bike2 %>% mutate(yr = as.integer (yr)-1)
+glimpse(bike2)
+```
+
+
+```{r}
+ggcorr(bike2, label = TRUE)
+```
+
+```{r}
+mod1 <- lm(count ~ temp, bike2)
+summary(mod1)
+```
+
+```{r}
+ggplot(bike2, aes(x=temp, y=count)) + geom_point() +
+geom_smooth(method = lm, se = FALSE) + theme_bw()
+```
+
+```{r}
+mod1 <- lm(count ~ atemp, bike2)
+summary(mod1)
+```
+
+
+```{r}
+ggplot(bike2, aes(x=atemp, y=count)) + geom_point() +
+geom_smooth(method = lm, se = FALSE) + theme_bw()
+```
+
+
+```{R}
+allmod = lm(count ~., bike2) 
+summary(allmod)
+```
+
+```{r}
+emptymod = lm(count ~1, bike2)
+summary(emptymod)
+```
+
+```{r}
+options(scipen = 999)
+
+forwardmod = stepAIC(emptymod, direction = "forward", scope=list(upper = allmod,lower= emptymod), trace = TRUE) 
+summary(forwardmod)
+
+options(scipen = 1)
+```
+
+
+```{r}
+summary(forwardmod)
+```
+
+What variables are included in the forward model?  Comment on the quality of the model.  Does it make sense intuitively?
+
+The forward model includes the following variables: hr, atemp, yr, weathersit, season, mnth, hum, weekday, holiday, windspeed, and temp.  
+
+The model is good.  The p-value is good (less than 0.05) and the r-squared value is also good at 0.6854
+
+###  Task 5 - Repeat Task 4 but for backward stepwise.
+
+```{r}
+backmod <- stepAIC(allmod, direction = "backward", trace = TRUE)
+```
+
+```{r}
+summary(backmod)
+```
+
+Backmod vs. Forwardmod produced the same results - same AIC.Same adjusted r-quare and same p-value with the same 11 variables:  Season, yr, mnth, hr, holiday, weekday, weathersit, temp, atemp, hum and windspeed.
+
+###  Task 6 - Convert "yr" to an integer.  Re-run forward stepwise regression - rebuidinging emptymod and allmod.  Did the model change?
+
+```{r}
+glimpse(bike2)
+```
+
+The results did not appear to change in either the forward or backward stepwise models.
+

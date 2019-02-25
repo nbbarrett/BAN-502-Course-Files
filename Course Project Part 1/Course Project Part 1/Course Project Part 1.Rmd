@@ -1,0 +1,131 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+##  Course Project - Part 1
+
+###  Nicholas Barrett, 02/24/19
+
+
+```{r}
+options(tidyverse_quiet = TRUE)
+library(tidyverse)
+library(GGally)
+library(ggcorrplot)
+library(VIM)
+library(rpart)
+library(caret)
+library(ROCR)
+library(RColorBrewer)
+library(rattle)
+```
+
+```{r}
+rain <- read.csv("rain.csv")
+```
+
+```{r}
+glimpse(rain)
+```
+```{r}
+summary(rain)
+```
+
+```{r}
+vim_plot = aggr(rain, numbers = TRUE, prop = c(TRUE, FALSE),cex.axis=.7)
+```
+
+```{r}
+rain = rain %>% select(-Date, -Cloud3pm, -Cloud9am, -WindGustDir, -WindDir3pm, -WindDir9am)
+vim_plot = aggr(rain, numbers = TRUE, prop = c(TRUE, FALSE),cex.axis=.7)
+```
+
+```{r}
+rain = rain %>% drop_na()
+str(rain)
+```
+
+```{r}
+rain = rain %>% mutate(RainToday = as.factor(RainToday)) %>%
+  mutate(RainToday = fct_recode(RainToday, "Yes" = "1", "No" = "0")) %>%
+  mutate(RainTomorrow = as.factor(RainTomorrow)) %>%
+  mutate(RainTomorrow = fct_recode(RainTomorrow, "Yes" = "1", "No" = "0"))
+```
+
+```{r}
+str(rain)
+```
+
+
+```{r}
+ggpairs(rain)
+```
+
+```{r}
+ggpairs(rain, columns = c("RainTomorrow", "RainToday", "Pressure9am", "Humidity3pm"))
+```
+
+
+```{r}
+set.seed(12345)
+
+train.rows = createDataPartition(y = rain$RainTomorrow, p=0.7, list = FALSE) 
+train = rain[train.rows,] 
+test = rain[-train.rows,]
+```
+
+
+```{r}
+ggplot(train, aes(x = RainToday, fill = RainTomorrow)) + geom_bar() + theme_bw()
+```
+
+```{r}
+ggplot(train, aes(x = Pressure9am, fill = RainTomorrow)) + geom_bar() + theme_bw()
+ggsave("9amPressure.png")
+```
+
+```{r}
+ggplot(train, aes(x = Pressure3pm, fill = RainTomorrow)) + geom_bar() + theme_bw()
+```
+
+
+```{r}
+ggplot(train, aes(x = MaxTemp, fill = RainTomorrow)) + geom_bar() + theme_bw()
+```
+
+```{r}
+ggplot(train, aes(x = Humidity3pm, fill = RainTomorrow)) + geom_bar() + theme_bw()
+ggsave("humidy.png")
+```
+
+```{r}
+tree1 = rpart(RainTomorrow ~., train, method = "class")
+fancyRpartPlot(tree1)
+```
+
+```{r}
+printcp(tree1)
+plotcp(tree1)
+```
+```{r}
+treepred = predict(tree1, train, type = "class")
+head(treepred)
+```
+
+```{r}
+confusionMatrix(treepred, train$RainTomorrow, positive = "Yes")
+```
+
+```{r}
+treepred_test = predict(tree1, test, type = "class")
+head(treepred_test)
+```
+
+```{r}
+confusionMatrix(treepred_test, test$RainTomorrow, positive = "Yes")
+```
+
+
+
+

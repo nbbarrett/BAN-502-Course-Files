@@ -1,0 +1,66 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+## Simple (One Predictor) Linear Regression
+
+Needed libraries
+```{r}
+library(tidyverse)
+library(GGally)
+library(ggcorrplot)
+```
+
+Read-in the data.  Before doing this make sure that you have placed the CreditData.csv file (downloadable from Canvas) in your projects working directory.
+
+```{r}
+credit <- read_csv("CreditData.csv")
+```
+
+Examine the structure and summary of the dataset
+```{r}
+str(credit) #all variables numeric
+summary(credit)  #notice 896 missing rows
+```
+
+Get rid of missing data rows
+```{r}
+credit <- credit %>% drop_na() #delete any row with an NA value
+str(credit) #check structure after the drop
+```
+
+Our Y (response) variable in the dataset is "AnnualCharges".  Let's look at ggparis plot for visualization and correlation.
+```{r}
+ggpairs(credit)
+```
+
+The best variable (by correlation and confirmed by visualization) to predict AnnualCharges appear to be AnnualIncome (correlation = 0.562 and there is an intuitive increase in charges as income increases).
+
+Build a regression model with AnnualIncome to predict AnnualCharges.
+```{r}
+mod1<-lm(AnnualCharges ~ AnnualIncome, credit) #create linear regression model
+summary(mod1) #examine the model
+```
+
+Is this a good model?
+
+```{r}
+ggplot(credit,aes(x=AnnualIncome,y=AnnualCharges))+geom_point()+geom_smooth(method="lm", color="red")+ theme_bw()
+```
+
+```{r}
+mod2<-lm(AnnualCharges ~ HouseholdSize, credit) #create linear regression model
+summary(mod2) #examine the model
+```
+
+```{r}
+ggplot(credit,aes(x=HouseholdSize,y=AnnualCharges))+geom_point()+geom_smooth(method="lm", color="red")+ theme_bw()
+```
+
+Is this a good model?
+
+R-squared value is pretty poor.  The HouseholdSize variable is significant (p-value is < 0.05)and has an intuitive sign.  Note:  As datasets increase in size, it is very easy for the predictor vairable to be significant.
+
+
+

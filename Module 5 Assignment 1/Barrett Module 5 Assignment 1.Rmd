@@ -1,0 +1,200 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+##  Module 5 Assignment 1 Neural Networks
+
+###  Nicholas Barrett, 02/23/19
+
+```{r}
+options(tidyverse.quiet = TRUE)
+library(tidyverse)
+library(caret)
+library(nnet)
+```
+
+```{r}
+parole = read_csv("parole.csv")
+```
+
+```{r}
+parole = parole %>% mutate(male = as.factor(male)) %>% 
+  mutate(male = fct_recode(male, "Female" = "0", "Male" = "1" ))
+parole = parole %>%mutate(race = as.factor(race)) %>%
+  mutate(race = fct_recode(race, "Other" = "2", "White" = "1" ))
+parole = parole %>% mutate(state = as.factor(state))%>%
+  mutate(state = fct_recode(state, "Kentucky"= "2", "Lousiana"= "3", "Virginia"= "4", "Other"= "1" ))
+parole = parole %>% mutate(crime = as.factor(crime))%>%
+  mutate(crime = fct_recode(crime, "Larceny"= "2", "Drug-Related"= "3", "Driving-Related"= "4", "Other"= "1" ))
+parole = parole %>% mutate(multiple.offenses = as.factor(multiple.offenses))%>%
+  mutate(multiple.offenses = fct_recode(multiple.offenses, "Incarcerated" = "1", "Other" = "0"  ))
+parole = parole %>% mutate(violator = as.factor(violator))%>%
+  mutate(violator = fct_recode(violator, "Violated" = "1", "No Violation" = "0"  ))
+```
+
+##  Task 1 - Split the data into training and testing sets. Training set should have 70% of the data.  Use a set seed of 12345
+
+```{r}
+set.seed(12345)
+
+train.rows = createDataPartition(y = parole$violator, p=0.7, list = FALSE) 
+train = parole[train.rows,] 
+test = parole[-train.rows,]
+```
+
+##  Task 2 - Create a neural network to predict parole violation. Use 12 and a decay rate of 0.1.  Use caret to implement 10-fold k-fold cross-validation.  Use a random number seed of 1234.
+
+```{r}
+start_time = Sys.time()
+fitControl = trainControl(method = "cv", number = 10)
+
+nnetGrid <- expand.grid(size = 12, decay = 0.1)
+
+set.seed(1234)
+nnetTrain = train(violator ~., 
+                  train,
+                  method = "nnet",
+                  tuneGrid = nnetGrid,
+                  trControl = fitControl,
+                  verbose = FALSE,
+                  trace = FALSE)
+
+end_time = Sys.time()
+end_time-start_time
+```
+
+```{r}
+nnetTrain
+```
+
+
+##  Task 3 - Use the model from Task 2 to develop predictions on the training set.  Use caret's confusionMatrix function to evaluate the model for quality.  Comment on the quality.
+```{r}
+predNetTrain = predict(nnetTrain, train)
+```
+
+```{r}
+confusionMatrix(predNetTrain, train$violator, positive = "Violated")
+```
+
+The nueral network model's accuracy with the size to be 12 and decay to be 0.1 was 88.3% accurate.  After tuning the model and using caret's confusionnMatric, the accuracy improved to 94.7% when applied to the training set.  So, the model is quite good.
+
+##  Task 4 - Create a neural network to predict parole violation.  use a grid to search sizes 1 through 12 (by 1) and decay rates of 0.1 to 0.5 (by 0.1).  use caret to implement 10-fild k-fold cross-validation.  Use a random number seed of 1234.  Suppress the text describing model convergence using the command trace = FALSE.
+
+
+```{r}
+start_time = Sys.time()
+fitControl = trainControl(method = "cv",
+                          number = 10)
+
+nnetGrid = expand.grid(size = seq(from = 1, to = 12, by = 1),
+                       decay = seq(from = 0.1, to = 0.5, by = 0.1))
+
+set.seed(1234)
+nnetFitTrain = train(violator ~., 
+                  train,
+                  method = "nnet",
+                  tuneGrid = nnetGrid,
+                  trControl = fitControl,
+                  verbose = FALSE,
+                  trace = FALSE)
+
+end_time = Sys.time()
+end_time-start_time
+```
+
+
+##  Task 5 - Use the model from Task 4 to develop predictions on the training set.  Use caret's confusionMatric function to evaluate the quality of the model.  Comment on the quality of the model.
+
+```{r}
+nnetFitTrain
+```
+
+```{r}
+predTrain = predict(nnetFitTrain, train)
+```
+
+```{r}
+confusionMatrix(predTrain, train$violator, positive = "Violated")
+```
+
+The optimal value of the tuning parameters for the training set were a size of 1 and a decay of 0.3.  After tuning, those parameters are different than the training set parameters of a size of 12 and a decay of 0.1.  The confusionMatrix showed an accuracy of 89.6% which isnt quite as good as the model with a 94.7% accuracy.
+
+##  Task 6 - Use the model from Task 2 to develop predictions on the testing set.  Comment on the model quality.
+
+```{r}
+start_time = Sys.time()
+fitControl = trainControl(method = "cv", number = 10)
+
+nnetGrid <- expand.grid(size = 12, decay = 0.1)
+
+set.seed(1234)
+nnetTest = train(violator ~., 
+                  test,
+                  method = "nnet",
+                  tuneGrid = nnetGrid,
+                  trControl = fitControl,
+                  verbose = FALSE,
+                  trace = FALSE)
+
+end_time = Sys.time()
+end_time-start_time
+```
+
+
+```{r}
+nnetTest
+```
+
+```{r}
+predNetTest= predict(nnetTest, test)
+```
+
+```{r}
+confusionMatrix(predNetTest, test$violator, positive = "Violated")
+```
+
+The model accuracy with the size to be 12 and decay to be 0.1 was 85.7% accurate.  After tuning the model and using caret's confusionnMatric, the accuracy improved to 95.05% when applied to the training set.  So, the model is quite good.
+
+## Task 7 - Use the model from Task 4 to develop prediction on the testing set.  Use caret's confusionMatrix to assess and comment on the quality of the model.
+
+```{r}
+start_time = Sys.time()
+fitControl = trainControl(method = "cv",
+                          number = 10)
+
+nnetGrid = expand.grid(size = seq(from = 1, to = 12, by = 1),
+                       decay = seq(from = 0.1, to = 0.5, by = 0.1))
+
+set.seed(1234)
+nnetFitTest = train(violator ~., 
+                  test,
+                  method = "nnet",
+                  tuneGrid = nnetGrid,
+                  trControl = fitControl,
+                  verbose = FALSE,
+                  trace = FALSE)
+
+end_time = Sys.time()
+end_time-start_time
+```
+
+
+```{r}
+nnetFitTest
+```
+
+```{r}
+predTest = predict(nnetFitTest, test)
+```
+
+```{r}
+confusionMatrix(predTest, test$violator, positive = "Violated")
+```
+
+The optimal value of the tuning parameters for the training set were a size of 1 and a decay of 0.1.  Those parameters are different than the training set parameters of a size of 12 and a decay of 0.1.  The confusionMatrix showed an accuracy of the tuned testing set model of 89.6% which isnt quite as good as the neural network training model with a 94.7% accuracy.
+
+##  Task 8 - Comment on whether there appears to be overfitting in one or both of your models from Task 2 and 4.
+
+Both models have a very high specificity and accuracy which could potentially mean they are both overfitted.

@@ -1,0 +1,162 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+##  Module 4 Assignment 1 - Classification Trees
+
+###  Nicholas Barrett, 02/16/19
+
+```{r}
+options(tidyverse.quiet = TRUE)
+library(tidyverse)
+library(caret)
+library(rpart)
+library(rattle)
+library(RColorBrewer)
+```
+```{r}
+parole = read_csv("parole.csv")
+```
+```{r}
+parole = parole %>% mutate(male = as.factor(male)) %>% 
+  mutate(male = fct_recode(male, "Female" = "0", "Male" = "1" ))
+parole = parole %>%mutate(race = as.factor(race)) %>%
+  mutate(race = fct_recode(race, "Other" = "2", "White" = "1" ))
+parole = parole %>% mutate(state = as.factor(state))%>%
+  mutate(state = fct_recode(state, "Kentucky"= "2", "Lousiana"= "3", "Virginia"= "4", "Other"= "1" ))
+parole = parole %>% mutate(crime = as.factor(crime))%>%
+  mutate(crime = fct_recode(crime, "Larceny"= "2", "Drug-Related"= "3", "Driving-Related"= "4", "Other"= "1" ))
+parole = parole %>% mutate(multiple.offenses = as.factor(multiple.offenses))%>%
+  mutate(multiple.offenses = fct_recode(multiple.offenses, "Incarcerated" = "1", "Other" = "0"  ))
+parole = parole %>% mutate(violator = as.factor(violator))%>%
+  mutate(violator = fct_recode(violator, "Violated" = "1", "No Violation" = "0"  ))
+```
+
+###  Task 1 - Split the training and testing sets.  Training set should have 70% of data and use a random number of 12345
+
+```{r}
+set.seed(12345)
+
+train.rows = createDataPartition(y = parole$violator, p=0.7, list = FALSE) 
+train = parole[train.rows,] 
+test = parole[-train.rows,]
+```
+
+
+###  Task 2 - Create a classification tree to predict "violator" in training set.  Plot tree.
+
+```{r}
+traintree1 = rpart(violator ~., train, method = "class")
+fancyRpartPlot(traintree1)
+```
+
+###  Task 3 - For above tree, classify a 40-year-old parolee from Lousiana who served a 5 year prison sentence.  Walk through the classification tree to describe the classfication of the LA parolee under those parameters.
+
+As 40-year-old parolee from Louisiana who served a 5 year prison sentence would be predicted to have a 3% chance of violating parole.
+
+13% of parolees are from states not Other, Kentucky or Virgina.  10% of those parolees are younger than 43-years-old.  3% of those who served more than or equal to 2.6 years violated parole.
+
+###  Task 4 - Use plotcp and printcp to evaluate tree performance as a function of the complexity parameter (cp).  Determine what cp value should be selected.
+
+```{r}
+printcp(traintree1)
+plotcp(traintree1)
+```
+
+The cp value that has the lowest cross-validated error is a cp of 0.054.
+
+###  Task 5 - Prune the tree from Task 2 with the best cp value without plotting the tree.
+
+```{r}
+traintree2 = prune(traintree1, cp = traintree1$cptable[which.min(traintree1$cptable[,"xerror"]), "CP"])
+summary(traintree2)
+```
+
+The majority class in the training set is No Violation with 418 observations.
+
+###  Task 6 - Use the tree from Task 2 to develop predictions for the testing data using caret's confusionMatrix function to calculate accuraracy, specificity, and sensitivity of the tree on the testing data.  Comment on the quality of the model.
+
+```{r}
+traintree1pred = predict(traintree1, train, type = "class")
+head(traintree1pred)
+```
+```{r}
+confusionMatrix(traintree1pred,train$violator, positive = "Violated")
+```
+
+The classification tree for the training data set is 90.7% with a specificity of 96.1% and a sensitivity of 49%.
+
+
+###  Task 7 - Use the unpruned tree from Task 2 to develop predictions for the testing data.  Use caret's confusionMatrix function to calculate accuracy, specificity, and sensitivity of the tree on the testing data.  Comment on the quality of the model.
+
+```{r}
+traintree2pred = predict(traintree1, test, type = "class")
+head(traintree2pred)
+```
+
+```{r}
+confusionMatrix(traintree2pred,test$violator, positive = "Violated")
+```
+
+The classifcation tree of the testing data has an accuracy of 86.1% but a naive rate of 88.6%.  So, the classification tree of the testing set is actually not as good a predictor than simply assuming everyone falls in the majority class of "No Violation". So, this model is not very good.
+
+###  Task 8 - Read in the "Blood.csv" dataset. Convert the DonatedMarch variable to a factor and recode the variable so 0= "No" and 1 = "Yes". 
+
+```{r}
+blood = read_csv("Blood.csv")
+```
+
+```{r}
+blood = blood %>% mutate(DonatedMarch = as.factor(DonatedMarch))%>%
+  mutate(DonatedMarch = fct_recode(DonatedMarch, "Yes" = "1", "No" = "0"))
+```
+###  Task 9 - Split the dataset into a training set and testing set. Use set seed 1234.  Develop a classification tree on the training set to predict "DonatedMarch".  Evaluate the parameter (cp) selection for the model.
+
+```{r}
+set.seed(1234)
+
+train.rows = createDataPartition(y = blood$DonatedMarch, p=0.7, list = FALSE) 
+train2 = blood[train.rows,] 
+test2 = blood[-train.rows,]
+```
+
+
+```{r}
+train2tree = rpart(DonatedMarch ~., train2, method = "class")
+fancyRpartPlot(train2tree)
+```
+
+```{r}
+printcp(train2tree)
+plotcp(train2tree)
+```
+
+The cp value that has the lowest cross-validated error is a cp of 0.01 with a 0.944 error.
+
+###  Task 10 - Prune the tree back to the optimal cp value, make predictions and use the confusionMatrix function on the training and testing sets.  Comment on the quality of the predictions.
+
+```{r}
+train2tree2 = prune(train2tree, cp = train2tree$cptable[which.min(train2tree$cptable[,"xerror"]), "CP"])
+```
+
+```{r}
+train2tree2pred = predict(train2tree2, test2, type = "class")
+head(train2tree2pred)
+```
+
+```{r}
+confusionMatrix(train2tree2pred,test2$DonatedMarch, positive = "Yes")
+```
+
+```{r}
+train2tree3pred = predict(train2tree2, train2, type = "class")
+head(train2tree3pred)
+```
+
+```{r}
+confusionMatrix(train2tree3pred,train2$DonatedMarch, positive = "Yes")
+```
+
+The classification tree model for the "blood" testing set was 80.8% where the naive model's accuracy was 76.3%.  The P-Value was over 0.06 so some of the variables may not have been significant in the model.  The classification tree was, however, more accurate making it a better predictor for DonatedMarch.  The classification tree model for the "blood" for the training data set was 80.9% accurate compared to 76.1% accuracy on the naive model.  The P-value of the training set was 0.005 showing high significance in the variables used in the model.  The training set was a solid predictive model for blood DonatedMarch by donors.
+

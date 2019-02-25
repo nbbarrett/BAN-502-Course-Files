@@ -1,0 +1,21 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+```{r}
+library(tidyverse)
+library(caret)
+```
+
+```{r}
+str(credit)
+```
+
+```{r}
+ctrl <- trainControl(method = "cv", number = 10)
+
+set.seed(123)
+modCV <- train(AnnualCharges ~ AnnualIncome, credit, method = "lm", trControl = ctrl, metric = "Rsquared")
+summary(modCV)
+```

@@ -1,0 +1,145 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+## Simple Linear Regression and Correlation - Module 2 Assignment 1
+
+###  Nicholas Barrett, 02/02/19
+
+
+###  Task 1 - Read-in the airquality dataset as a df called "air".
+
+
+```{r}
+library(tidyverse)
+library(GGally)
+```
+
+```{r}
+air <- airquality
+```
+
+```{r}
+str(air)
+```
+
+```{r}
+summary(air)
+```
+
+a.  All of the variables (Ozone, Solar.R, Wind, Temperature, Month and Day) in the new "air" dataset are represented as numeric.
+
+b.  The "air" dataset contains 153 observations of 6 variables 
+
+c.  The Ozone and Solar R variables as missing data (37 in "Ozone" and 7 in "Solar.R")
+
+d.  Ozone levels is the most likely response variable (Y)
+
+###  Task 2 - Missing data in the two variables: "Ozone" and "Solar.R"  Three options - Delete the rows with missing data, delete the columns with missing data or impute values to replace missing values.  Delete rows with missing data.
+
+
+
+```{r}
+air2<- air %>% filter(!is.na(Ozone)) %>% filter(!is.na(Solar.R))
+```
+
+The new "air2" dataset has 111 rows and 6 columns.
+
+###  Task 3 - Use the code provided to develop a visualization of and to calculate correlation for the combinations of variables in this dataset.  Use "ggcorr" to develop a correlation matrix for the variables. 
+
+
+
+```{r}
+ggpairs(air2)
+ggcorr(air2,label = TRUE)
+```
+
+a.  The variable that most strongly correlates with the "Ozone" variable is "Temp".
+
+b.  The variable that least strongly correlates with the "Ozone" variable is "Wind".
+
+###  Task 4 - Plot "Temp" vs. "Ozone" using "ggplot" using appropriate chart typle.  Describe the relationship between the two variables.
+
+
+
+```{r}
+ggplot(air2, aes(x = Temp, y = Ozone)) + 
+  geom_point()
+```
+
+Based on the plot above, "Temp" appears to have an increasing linear relationship with "Ozone" with some outliers. As temparatures rise, ozone levels appear to rise.
+
+###  Task 5 - Create a linear regression model (model1) using "Temp" to predict "Ozone".
+
+
+```{r}
+model1<- lm(Ozone ~ Temp, air2)
+summary(model1)
+```
+
+a.  The above "model1" model for the "air2" appears to be a decent predicative model for determining Ozone from the Temp variables.  The Temp, predictor, variable is significant with a p-value less than 0.05.  The R-squared value is pretty good at 0.4833.
+
+b.  Based on the 95% confidence interval below,the slope co-efficent falls between 1.964787 and 2.913433
+
+
+```{r}
+confint(model1)
+```
+
+###  Task 6 - Re-do Task 4 
+
+
+```{r}
+ggplot(air2, aes(x = Temp, y = Ozone)) + geom_point()+
+  geom_smooth(method = "lm", se = FALSE, color = "red")+
+  theme_bw()
+```
+
+###  Task 7 - Develop a prediction and prediction interval for "Ozone" when "Temp" is 80.
+
+
+```{r}
+testdata = data.frame(Temp = 80)
+predict(model1, newdata = testdata, interval = "predict")
+```
+
+The prediction for Ozone when Temp is 80 is 47.48272 with a predicaiton interval between -0.1510188 lower and 95.11646 upper.
+
+###  Task 8 - Plot "Day" vs. "Ozone" using ggplot.  Describe the relationship between the two variables.
+
+
+```{r}
+ggplot(air2, aes(x = Day, y = Ozone)) + geom_point()
+```
+
+Considering the plot above, there does not appears to be an apparent or significant linear relationship between "Day" and "Ozone".
+
+###  Task 9 - Create a linear regression model called "model2" using "Day" to predict "Ozone".
+
+
+```{r}
+model2<- lm(Ozone ~ Day, air2)
+summary(model2)
+```
+
+a.  The above "model2" model for the "air2" appears to be a very poor predicative model for determining Ozone from the Day variables.  The Day, predictor, variable is insignificant with a p-value more than 0.05 (0.957).  The R-squared value is also bad at -0.009147.
+
+b.  Based on the 95% confidence interval below,the slope co-efficent falls between -0.745321 and 0.7056539
+
+```{r}
+confint(model2)
+```
+
+###  Task 10 - Re-do Task 8 to inlcude the regression line.
+
+
+
+```{r}
+ggplot(air2, aes(x = Day, y = Ozone)) + geom_point()+
+  geom_smooth(method = "lm", se = FALSE, color = "red")+
+  theme_bw()
+```
+
+
+

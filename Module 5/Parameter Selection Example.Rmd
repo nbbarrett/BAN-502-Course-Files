@@ -1,0 +1,78 @@
+```{r}
+options(tidyverse.quiet = TRUE)
+library(tidyverse)
+library(titanic)
+library(mice)
+library(VIM)
+library(randomForest)
+library(caret)
+library(e1071)
+```
+```{r}
+titanic <- titanic::titanic_train
+```
+
+structure and summary
+```{r}
+str(titanic)
+summary(titanic)
+```
+
+```{r}
+titanic <- titanic %>% mutate(Survived = as.factor(Survived)) %>%
+  mutate(Survived = fct_recode(Survived, "No" = "0", "Yes" = "1")) %>%
+  mutate(Pclass = as.factor(Pclass)) %>% mutate(Sex = as.factor(Sex)) %>%
+  mutate(Embarked = as.factor(Embarked)) %>%
+  mutate(Embarked = fct_recode(Embarked, "Unknown" = "", "Cherbourg" = "C", "Southampton" = "S", "Queenstown" = "Q"))
+
+titanic$Cabin[titanic$Cabin==""] = NA
+
+str(titanic)
+```
+
+```{r}
+titanic = titanic %>% select(-Cabin)
+```
+
+```{r}
+vim_plot = aggr(titanic, numbers = TRUE, prop = c(TRUE, FALSE), cex.axis=.7)
+```
+
+```{r}
+titanic = titanic %>% select(c("Survived", "Pclass", "Sex", "Age", "SibSp", "Parch", "Embarked"))
+
+imp_age <- mice(titanic, m=1, method = 'pmm', printFlag = FALSE)
+summary(imp_age)
+```
+
+```{r}
+titanic_complete = complete(imp_age)
+summary(titanic_complete)
+```
+
+```{r}
+fit_control = trainControl(method = "cv", number = 10)
+
+tunegrid <- expand.grid(.mtry = 1:6)
+
+set.seed(123)
+rf_fit = train(Survived ~., data = titanic_complete,
+               method = "rf",
+               num.trees = 100,
+               tuneGrid = tunegrid, 
+               trControl = fit_control)
+```
+
+```{r}
+print(rf_fit)
+plot(rf_fit)
+```
+
+```{r}
+predRF = predict(rf_fit, titanic_complete)
+```
+```{r}
+confusionMatrix(predRF, titanic_complete$Survived, positive = "Yes")
+```
+
+

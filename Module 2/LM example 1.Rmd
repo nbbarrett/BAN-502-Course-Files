@@ -1,0 +1,36 @@
+##Correlation
+
+Libraries
+
+```{r}
+#install.packages("tidyverse")
+#OK to include install.packages in R code chunks, but do not leave in when you knit your R Markdown document
+library(tidyverse)
+library(ggcorrplot) #for ggcorrplot development
+library(GGally) #for ggcorr 
+```
+
+Read data
+```{r}
+econ <- as.tibble(economics)
+glimpse(econ)
+#Note: pce = personal consumption expenditures ($bln), pop = total population (1000's), psavert = personal savings rate, uempmed = median duration of unemployment (weeks), unemploy = number of unemployed (1000s)
+```
+
+Correlation plots with ggcorr and ggcorrplot
+```{r}
+ggcorr(econ, label = TRUE)  #feed the data frame directly to the function
+#Note:  ggcorr automatically ignores non-numeric data
+
+#ggcorrplot
+econ_num <- econ %>% select(-date)
+corr <- round(cor(econ_num), 2) #calculate correlation matric to two decimals
+corr #show correlation table
+ggcorrplot(corr, type = "lower", lab = TRUE) #generate plot
+```
+
+ggpairs demonstration
+```{r}
+ggpairs(econ)
+```
+

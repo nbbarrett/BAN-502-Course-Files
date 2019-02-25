@@ -1,0 +1,74 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+##  Module 4 Example Classification Trees
+
+```{r}
+options(tidyverse.quiet = TRUE)
+library(titanic)
+library(tidyverse)
+library(mice)
+library(VIM)
+library(rpart)
+library(rattle)
+library(RColorBrewer)
+```
+```{r}
+titanic = titanic::titanic_train
+```
+
+```{r}
+str(titanic)
+summary(titanic)
+```
+
+```{r}
+titanic = titanic %>% mutate(Survived = as.factor(Survived)) %>%
+  mutate(Survived = fct_recode(Survived, "NO" = "0", "Yes" = "1")) %>%
+  mutate(Pclass = as.factor(Pclass)) %>% mutate(Sex = as.factor(Sex)) %>%
+  mutate(Embarked = as.factor(Embarked)) %>%
+  mutate(Embarked = fct_recode(Embarked, "Unknown" = "", "Cherbourg" = "C", "Southampton" = "S", "Queenstown" = "Q"))
+
+titanic$Cabin[titanic$Cabin==""] = NA
+
+str(titanic)
+```
+
+```{r}
+titanic = titanic %>% select(-Cabin)
+vim_plot = aggr(titanic, numbers = TRUE, prop = c(TRUE, FALSE), cex.axis=.7)
+```
+
+```{r}
+titanic = titanic %>% select(c("Survived", "Pclass", "Sex", "Age", "SibSp", "Parch", "Embarked"))
+
+imp_age = mice(titanic, m=1, method='pmm', printFlag = FALSE)
+summary(imp_age)
+```
+
+```{r}
+titanic_complete = complete(imp_age)
+summary(titanic_complete)
+```
+
+```{r}
+tree1 = rpart(Survived ~., titanic_complete, method = "class")
+fancyRpartPlot(tree1)
+```
+```{r}
+printcp(tree1)
+plotcp(tree1)
+```
+
+```{r}
+tree2 = rpart(Survived ~., titanic_complete, cp = 0.0001, method = "class")
+fancyRpartPlot(tree2)
+```
+
+```{r}
+printcp(tree2)
+plotcp(tree2)
+```
+

@@ -1,0 +1,293 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+##  Module 3 Assignment 2 Logistic Regression
+
+###  Nicholas Barrett, 02/10/19
+
+```{r}
+library(tidyverse)
+library(MASS) #access to forward and backward selection algorithms
+library(caret) #for splitting functions
+library(ROCR) #for threshold selction
+library(GGally)
+library(ggcorrplot)
+```
+
+Load data from the parole.csv file.  
+```{r}
+parole = read_csv("parole.csv")
+```
+
+Structure and summary
+```{r}
+str(parole)
+summary(parole)
+```
+
+Factor conversion. Convert the response variable.
+```{r}
+parole = parole %>% mutate(male = as.factor(male)) %>% 
+  mutate(male = fct_recode(male, "Female" = "0", "Male" = "1" ))
+```
+
+```{r}
+parole = parole %>%mutate(race = as.factor(race)) %>%
+  mutate(race = fct_recode(race, "Other" = "2", "White" = "1" ))
+```
+
+```{r}
+parole = parole %>% mutate(state = as.factor(state))%>%
+  mutate(state = fct_recode(state, "Kentucky"= "2", "Lousiana"= "3", "Virginia"= "4", "Other"= "1" ))
+```
+
+
+```{r}
+parole = parole %>% mutate(crime = as.factor(crime))%>%
+  mutate(crime = fct_recode(crime, "Larceny"= "2", "Drug-Related"= "3", "Driving-Related"= "4", "Other"= "1" ))
+```
+
+```{r}
+parole = parole %>% mutate(multiple.offenses = as.factor(multiple.offenses))%>%
+  mutate(multiple.offenses = fct_recode(multiple.offenses, "Incarcerated" = "1", "Other" = "0"  ))
+```
+
+```{r}
+parole = parole %>% mutate(violator = as.factor(violator))%>%
+  mutate(violator = fct_recode(violator, "Violated" = "1", "No Violation" = "0"  ))
+```
+
+```{r}
+str(parole)
+```
+
+
+###  Task 1 - Split the data into training and testing sets with training set having 70% of data.  use random number of 12345
+
+```{r}
+set.seed(12345)
+
+train.rows = createDataPartition(y = parole$violator, p=0.7, list = FALSE) 
+train = parole[train.rows,] 
+test = parole[-train.rows,]
+```
+
+
+###  Task 2 - Identify the variables in the training set that are most predictive of the response variable "violator" using data visualizations and/or tables.  Explain the thought process.
+
+I initially used ggpairs correlation visualization but realized that the variables with several levels created too many variables to get a good feel for the variable with the best correlation to "violators".  I also tried another ggpairs plot with fewer variables to try to determine if it would be helpful.  Ultimately, I decided to use bar plots and tables (like the Titantic expample) comparing the eight variables individually to violators.
+
+```{r}
+ggpairs(train)
+```
+
+```{r}
+ggpairs(train, columns = c("violator", "male", "race", "age", "state"))
+```
+
+```{r}
+ggpairs(train, columns = c("violator", "race", "age"))
+```
+
+```{r}
+ggpairs(train, columns = c("violator", "age"))
+```
+
+```{r}
+ggplot(train, aes(x=state, fill = violator)) + geom_bar() + theme_bw()
+```
+
+```{r}
+ggplot(train, aes(x=multiple.offenses, fill = violator)) + geom_bar() + theme_bw()
+```
+
+```{r}
+ggplot(train, aes(x=max.sentence, fill = violator)) + geom_bar() + theme_bw()
+```
+
+```{r}
+ggplot(train, aes(x=time.served, fill = violator)) + geom_bar() + theme_bw()
+```
+
+
+
+```{r}
+ggplot(train, aes(x=age, fill = violator)) + geom_bar() + theme_bw()
+```
+
+```{r}
+t1 = table(parole$violator, parole$race)
+prop.table(t1, margin = 2)
+```
+
+```{r}
+t2 = table(parole$violator, parole$state)
+prop.table(t2, margin = 2)
+```
+
+```{r}
+t3 = table(parole$violator, parole$male)
+prop.table(t3, margin = 2)
+```
+
+```{r}
+t4 = table(parole$violator, parole$multiple.offenses)
+prop.table(t4, margin = 2)
+```
+
+```{r}
+t5 = table(parole$violator, parole$crime)
+prop.table(t5, margin = 2)
+```
+
+```{r}
+t6 = table(parole$violator, parole$max.sentence)
+prop.table(t6, margin = 2)
+```
+
+###  Task 3 - Identify the variable that is most predictive based on observation from Task 2.
+
+The variable that is most predicative to violator is the parolees state with Lousiana's 45% violator percentage of those incarcerated violating parole.  The state/violator model showed significance in all states except Kentucky and highlighted the likilook of a violation clearly as the highest in Lousiana.  The AIC value was also very low in comparison to the multiple.offenses/violator model (272.58 to 335.5, respectfully) I considered mulitple offenses at the most predicative with 14.64% of those incarcerated violating but upon comparing the two in linear models and AIC, it appears state is the stronger predictor.  
+
+```{r}
+mod1 = glm(violator ~ state, train, family = "binomial")
+summary(mod1)
+```
+
+```{r}
+mod2 = glm(violator ~ multiple.offenses, train, family = "binomial")
+summary(mod2)
+```
+
+###  Task 4 - Use forward or backward stepwise to determine the best model for predicting violators using AIC to evaluate goodness.
+
+I used backward and forward stepwise to find the best model. The backward stepwise model is a good model and best predicts violators with the combination of age, race, state, max.entence and multiple offenses. This combination produces a AIC of 252.28.  This result is somewhat intuitive when considering state and multiple sentences.  The plots I used to compare variables led me to believe state and multiple sentences were good predictores.  What wasnt intuitive is the insignificance of the P values of Louisiana.  Louisana parolees appeared to have the highest correlation to violations but in this model the P value was insignificant.  Model significance:  race, Virginia, Max.Sentence and multiple offences.  Model insignificance: age, kentucky, Lousiana and max. sentence.
+
+The cooefficients make sense.  
+
+In my forward stepwise model the AIC was the same as backward model at 252.28
+
+
+```{r}
+allmod = glm(violator ~ male + age + race + state + time.served + crime + max.sentence + multiple.offenses, train, family = "binomial") 
+summary(allmod)  
+  
+emptymod = glm(violator ~1, train, family = "binomial") 
+summary(emptymod)
+```
+
+
+```{r}
+backmod = stepAIC(allmod, direction = "backward", trace = TRUE) 
+summary(backmod)
+```
+
+```{r}
+forwardmod = stepAIC(emptymod, direction = "forward", scope=list(upper=allmod,lower=emptymod),
+                      trace = TRUE) 
+summary(forwardmod) 
+```
+
+###  Task 5 - Create a logistic regression model using the training set to predict "violators" using state, mulitple.offenses and race.
+
+
+```{r}
+mod3 = glm(violator ~ state + multiple.offenses + race, train, family = "binomial")
+summary(mod3)
+```
+
+This model looks good with an AIC of 252.42 which is very similar to the best model.  Considering the coefficients, Kentucky and Lousiana were insignificant; whereas, race, all other states, Virginia and multiple.offenses were significant.
+
+###  Task 6 - Predict the probability of a parole violation of two parolees. Parolee1:  Lousiana with multiple offenses and white race.  Parolee2:  Kentucky with no mulitple offenses and other race.
+
+The predicted probability of Parolee 1 to violate is 40.86% that they will violate parole.
+
+The predicated probability of Parolee 2 to violate is 11.53% that they will violate parole.
+
+```{r}
+mod4 = glm(violator ~ state + multiple.offenses + race, train, family = "binomial")
+```
+
+```{r}
+Parolee1Pred <- data.frame(state = "Lousiana", multiple.offenses = "Incarcerated", race = "White")
+```
+
+```{r}
+predict(mod4, Parolee1Pred, type = "response")
+```
+
+```{r}
+Parolee2Pred <- data.frame(state = "Kentucky", multiple.offenses = "Other", race = "Other")
+predict(mod4, Parolee2Pred, type = "response")
+```
+
+###  Task 7 - Develop a ROC curve and determien the probably threshold that best balances specificity and sensitivity on the training set.  Use type = "response" and do not use .2.
+
+
+```{r}
+predictions <- predict(backmod, train, type = "response")
+head(predict)
+```
+
+```{r}
+ROCRpred = prediction(predictions, train$violator) 
+
+ROCRperf = performance(ROCRpred, "tpr", "fpr")
+plot(ROCRperf, colorize=TRUE, print.cutoffs.at=seq(0,1,by=0.1), text.adj=c(-0.2,1.7))
+```
+
+
+###  Task 8 - What is the accuracy, sensitivity and specificity of the model on the training set given the cutoff from Task 7?  What are the implications of incorrectly classifying a parolee?
+
+The accuracy of the training set 0.8414376
+
+The sensitivity of the training set is 0.7636364
+
+The specificity of the training set is 0.8540670
+
+The implications of incorrectly classifying a parolee to balance accuracy against sensitivy and specificity is assuming that some parolees will be violators when they will not be and conversely assuming some parolees will not be violators when they will be violators of parole.
+
+
+```{r}
+as.numeric(performance(ROCRpred, "auc")@y.values)
+```
+
+```{r}
+opt.cut = function(perf, pred){
+    cut.ind = mapply(FUN=function(x, y, p){
+        d = (x - 0)^2 + (y-1)^2
+        ind = which(d == min(d))
+        c(sensitivity = y[[ind]], specificity = 1-x[[ind]], 
+            cutoff = p[[ind]])
+    }, perf@x.values, perf@y.values, pred@cutoffs)
+}
+print(opt.cut(ROCRperf, ROCRpred))
+```
+
+```{r}
+t1 = table(train$violator,predictions > 0.1455707)
+t1
+```
+
+```{r}
+(t1[1,1]+t1[2,2])/nrow(train)
+```
+
+###  Task 9 - Identify a probability threshold (via trial ad error) that best maximizes accuracy on the training set.
+
+By using trial and error, the probability threshold that best maximizes accuracy is 0.68.
+
+```{r}
+t1 = table(train$violator,predictions > .68)
+t1
+(t1[1,1]+t1[2,2])/nrow(train)
+```
+
+
+###  Task 10 - Use your probability threshold from Task 9 to determine accuracy of the model on the testing set.
+
+The accuracy of the predicative model is 84.1% when balancing sensitivity and specificity.  Through trial and error calculations in probability thresholds. The best accuracy generated through trial and error is 89.64%
+
+
